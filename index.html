@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rastreador de Água Diário</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome para Ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        water: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Smooth transitions */
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.5s ease-in-out;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        .custom-glass {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        /* Hide scrollbars but allow scrolling */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-sky-50 via-indigo-50 to-blue-100 min-h-screen flex items-center justify-center p-4 font-sans text-slate-700">
+
+    <!-- Widget Container -->
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-xl shadow-blue-500/10 border border-slate-100 overflow-hidden relative">
+        
+        <!-- Header -->
+        <div class="p-6 pb-2 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="w-9 h-9 rounded-2xl bg-water-100 flex items-center justify-center text-water-600 shadow-inner">
+                    <i class="fa-solid font-bold fa-droplet text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-800 leading-tight">Hidratação</h1>
+                    <p class="text-xs text-slate-400 font-medium" id="current-date">Hoje</p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center space-x-1">
+                <button id="btn-settings" title="Ajustar Meta" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-gear text-sm"></i>
+                </button>
+                <button id="btn-reset" title="Reiniciar Dia" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition">
+                    <i class="fa-solid fa-rotate-right text-sm"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Progress Circle Display -->
+        <div class="px-6 py-4 flex flex-col items-center justify-center relative">
+            <div class="relative w-48 h-48 flex items-center justify-center">
+                <svg class="w-full h-full" viewBox="0 0 100 100">
+                    <!-- Background Circle -->
+                    <circle
+                        class="text-slate-100"
+                        stroke-width="8"
+                        stroke="currentColor"
+                        fill="transparent"
+                        r="42"
+                        cx="50"
+                        cy="50"
+                    />
+                    <!-- Progress Circle -->
+                    <circle
+                        id="progress-ring"
+                        class="text-water-500 progress-ring-circle"
+                        stroke-width="8"
+                        stroke-linecap="round"
+                        stroke="currentColor"
+                        fill="transparent"
+                        r="42"
+                        cx="50"
+                        cy="50"
+                        stroke-dasharray="263.89"
+                        stroke-dashoffset="263.89"
+                    />
+                </svg>
+
+                <!-- Centered Text Info -->
+                <div class="absolute flex flex-col items-center justify-center text-center">
+                    <span id="percentage" class="text-3xl font-extrabold text-slate-800 tracking-tight">0%</span>
+                    <div class="text-xs font-semibold text-slate-400 mt-0.5">
+                        <span id="current-intake" class="text-water-600 font-bold text-sm">0</span> / <span id="goal-display">2000</span> ml
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Add Buttons -->
+        <div class="px-6 space-y-3">
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="addWater(200)" class="py-2.5 px-3 bg-water-50 hover:bg-water-100 text-water-700 font-semibold rounded-2xl border border-water-100/60 transition active:scale-95 flex flex-col items-center justify-center">
+                    <span class="text-xs text-water-400 font-medium">+ Copo</span>
+                    <span class="text-sm">200 ml</span>
+                </button>
+                <button onclick="addWater(300)" class="py-2.5 px-3 bg-water-50 hover:bg-water-100 text-water-700 font-semibold rounded-2xl border border-water-100/60 transition active:scale-95 flex flex-col items-center justify-center">
+                    <span class="text-xs text-water-400 font-medium">+ Caneca</span>
+                    <span class="text-sm">300 ml</span>
+                </button>
+                <button onclick="addWater(500)" class="py-2.5 px-3 bg-water-50 hover:bg-water-100 text-water-700 font-semibold rounded-2xl border border-water-100/60 transition active:scale-95 flex flex-col items-center justify-center">
+                    <span class="text-xs text-water-400 font-medium">+ Garrafa</span>
+                    <span class="text-sm">500 ml</span>
+                </button>
+            </div>
+
+            <!-- Custom Input Form -->
+            <form id="custom-form" class="flex gap-2">
+                <div class="relative flex-1">
+                    <input type="number" id="custom-amount" min="1" max="3000" placeholder="Quantidade personalizada" class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-water-400 focus:bg-white transition" required />
+                    <span class="absolute right-3 top-2.5 text-xs text-slate-400 pointer-events-none">ml</span>
+                </div>
+                <button type="submit" class="bg-water-500 hover:bg-water-600 text-white text-xs font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 shadow-md shadow-water-500/20">
+                    Adicionar
+                </button>
+            </form>
+        </div>
+
+        <!-- Weekly History Section -->
+        <div class="p-6 pt-5">
+            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Últimos 7 dias</h2>
+            <div id="history-container" class="grid grid-cols-7 gap-1.5 text-center">
+                <!-- JS renderizará as barras do histórico aqui -->
+            </div>
+        </div>
+
+        <!-- Modal Ajustar Meta -->
+        <div id="settings-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-xs shadow-2xl space-y-4">
+                <h3 class="text-base font-bold text-slate-800">Ajustar Meta Diária</h3>
+                <div>
+                    <label class="text-xs text-slate-500 font-medium block mb-1">Sua nova meta (ml):</label>
+                    <input type="number" id="new-goal-input" step="50" min="500" max="10000" class="w-full bg-slate-50 border border-slate-200 text-slate-800 font-semibold rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-water-500">
+                </div>
+                <div class="flex gap-2">
+                    <button id="btn-cancel-settings" class="w-1/2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-xl transition">Cancelar</button>
+                    <button id="btn-save-settings" class="w-1/2 py-2 bg-water-500 hover:bg-water-600 text-white text-xs font-semibold rounded-xl transition shadow-md shadow-water-500/20">Salvar</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Data & State Management
+        const STORAGE_KEY = 'water_tracker_data';
+        const CIRCLE_RADIUS = 42;
+        const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS;
+
+        let state = {
+            goal: 2000,
+            current: 0,
+            lastDate: new Date().toLocaleDateString('sv-SE'), // YYYY-MM-DD
+            history: {} // {'YYYY-MM-DD': intake_amount}
+        };
+
+        // DOM Elements
+        const progressRing = document.getElementById('progress-ring');
+        const percentageText = document.getElementById('percentage');
+        const currentIntakeText = document.getElementById('current-intake');
+        const goalDisplayText = document.getElementById('goal-display');
+        const historyContainer = document.getElementById('history-container');
+        const currentDateText = document.getElementById('current-date');
+        
+        const settingsModal = document.getElementById('settings-modal');
+        const newGoalInput = document.getElementById('new-goal-input');
+
+        // Initialization
+        window.onload = function() {
+            loadState();
+            checkNewDay();
+            setupDateDisplay();
+            updateUI();
+        };
+
+        // Setup Date Header
+        function setupDateDisplay() {
+            const options = { weekday: 'short', day: 'numeric', month: 'short' };
+            const today = new Date();
+            currentDateText.innerText = today.toLocaleDateString('pt-BR', options);
+        }
+
+        // Local Storage Functions
+        function loadState() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    state = JSON.parse(saved);
+                } catch(e) {
+                    console.error("Erro ao carregar dados", e);
+                }
+            }
+        }
+
+        function saveState() {
+            state.history[state.lastDate] = state.current;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+
+        // Reset Diário Automático
+        function checkNewDay() {
+            const todayStr = new Date().toLocaleDateString('sv-SE');
+            if (state.lastDate !== todayStr) {
+                // Guarda o valor anterior no histórico e reseta o atual
+                state.history[state.lastDate] = state.current;
+                state.lastDate = todayStr;
+                state.current = 0;
+                saveState();
+            }
+        }
+
+        // Update UI Visuals
+        function updateUI() {
+            // Percent Calc
+            const percentage = Math.min(100, Math.round((state.current / state.goal) * 100));
+            
+            // Text values
+            currentIntakeText.innerText = state.current;
+            goalDisplayText.innerText = state.goal;
+            percentageText.innerText = `${percentage}%`;
+
+            // Circle Progress Animation
+            const offset = CIRCLE_CIRCUMFERENCE - (percentage / 100) * CIRCLE_CIRCUMFERENCE;
+            progressRing.style.strokeDasharray = `${CIRCLE_CIRCUMFERENCE} ${CIRCLE_CIRCUMFERENCE}`;
+            progressRing.style.strokeDashoffset = offset;
+
+            // Render History Bars
+            renderHistory();
+        }
+
+        // Render Historical Data (7 Days)
+        function renderHistory() {
+            historyContainer.innerHTML = '';
+            
+            const daysOfWeek = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            const today = new Date();
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(today.getDate() - i);
+                const dateStr = date.toLocaleDateString('sv-SE');
+                const dayLabel = daysOfWeek[date.getDay()];
+                
+                const dayIntake = state.history[dateStr] || (dateStr === state.lastDate ? state.current : 0);
+                const dayPercent = Math.min(100, Math.round((dayIntake / state.goal) * 100));
+                
+                const isToday = i === 0;
+
+                const column = document.createElement('div');
+                column.className = 'flex flex-col items-center gap-1';
+                column.innerHTML = `
+                    <div class="w-full bg-slate-100 rounded-lg h-16 relative flex items-end p-0.5 overflow-hidden">
+                        <div class="w-full ${isToday ? 'bg-water-500' : 'bg-water-300'} rounded-md transition-all duration-300" style="height: ${dayPercent}%"></div>
+                    </div>
+                    <span class="text-[10px] font-semibold ${isToday ? 'text-water-600 font-bold' : 'text-slate-400'}">${dayLabel}</span>
+                `;
+                historyContainer.appendChild(column);
+            }
+        }
+
+        // Add Water Logic
+        function addWater(amount) {
+            checkNewDay();
+            state.current += parseInt(amount);
+            saveState();
+            updateUI();
+        }
+
+        // Custom Form Submit
+        document.getElementById('custom-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const input = document.getElementById('custom-amount');
+            const val = parseInt(input.value);
+            if (val > 0) {
+                addWater(val);
+                input.value = '';
+            }
+        });
+
+        // Reset Manual Button
+        document.getElementById('btn-reset').addEventListener('click', function() {
+            if (confirm("Deseja zerar a contagem de água de hoje?")) {
+                state.current = 0;
+                saveState();
+                updateUI();
+            }
+        });
+
+        // Settings Modal Open/Close
+        document.getElementById('btn-settings').addEventListener('click', function() {
+            newGoalInput.value = state.goal;
+            settingsModal.classList.remove('hidden');
+        });
+
+        document.getElementById('btn-cancel-settings').addEventListener('click', function() {
+            settingsModal.classList.add('hidden');
+        });
+
+        document.getElementById('btn-save-settings').addEventListener('click', function() {
+            const val = parseInt(newGoalInput.value);
+            if (val >= 500) {
+                state.goal = val;
+                saveState();
+                updateUI();
+                settingsModal.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
